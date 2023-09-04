@@ -11,4 +11,13 @@ enum TypeScriptTypes: string
     case Null = 'null';
     case Array = 'array';
     case Object = 'object';
+
+    public function toString(): string
+    {
+        if ($this === self::Array) {
+            return 'Array<any>';
+        }
+
+        return $this->value;
+    }
 }

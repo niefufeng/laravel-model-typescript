@@ -19,7 +19,7 @@ use Illuminate\Support\Str;
 use NieFufeng\LaravelModelTypescript\Enums\TypeScriptTypes;
 use NieFufeng\LaravelModelTypescript\Transit;
 use NieFufeng\LaravelModelTypescript\TypeScriptDefinition;
-use NieFufeng\LaravelModelTypescript\Utils\ClassHelper;
+use NieFufeng\LaravelModelTypescript\Utils\Helper;
 use ReflectionMethod;
 
 class RelationsGenerator implements GeneratorContract
@@ -47,18 +47,20 @@ class RelationsGenerator implements GeneratorContract
             if ($this->isManyRelation($relationReturn::class)) {
                 $transit->relationDefinitions[] = new TypeScriptDefinition(
                     name: Str::snake($method->name),
-                    types: 'Array<' . ClassHelper::namespaceClassToDotClass(get_class($relationReturn->getRelated())) . '>',
+                    types: 'Array<' . Helper::classToDotClass(get_class($relationReturn->getRelated())) . '>',
                     optional: true,
                     readonly: true,
                     nullable: false
                 );
 
-                $transit->definition[] = new TypeScriptDefinition(
-                    name: Str::snake($method->name) . '_count',
-                    types: TypeScriptTypes::Number,
-                    optional: true,
-                    readonly: true,
-                );
+                if (!in_array(Str::snake($method->name) . '_count', $transit->databaseColumns)) {
+                    $transit->definition[] = new TypeScriptDefinition(
+                        name: Str::snake($method->name) . '_count',
+                        types: TypeScriptTypes::Number,
+                        optional: true,
+                        readonly: true,
+                    );
+                }
 
                 $transit->generatorQueue->push(get_class($relationReturn->getRelated()));
             } else if ($this->isMorphToRelation($relationReturn::class)) {
@@ -72,7 +74,7 @@ class RelationsGenerator implements GeneratorContract
             } else if ($this->isOneRelation($relationReturn::class)) {
                 $transit->relationDefinitions[] = new TypeScriptDefinition(
                     name: Str::snake($method->name),
-                    types: ClassHelper::namespaceClassToDotClass(get_class($relationReturn->getRelated())),
+                    types: Helper::classToDotClass(get_class($relationReturn->getRelated())),
                     optional: true,
                     readonly: true,
                     nullable: true
@@ -135,11 +137,20 @@ class RelationsGenerator implements GeneratorContract
             ->filter(fn(ReflectionMethod $method) => $this->isRelationMethod($method, $transit));
     }
 
+    /**
+     * @throws \ReflectionException
+     */
     protected function isRelationMethod(ReflectionMethod $method, Transit $transit): bool
     {
 //        if ($method->isStatic() || $method->isAbstract() || $method->getDeclaringClass()->getName() !== get_class($transit->model)) {
 //            return false;
 //        }
+
+        $returnType = Helper::getReturnType($method);
+
+        if ($returnType instanceof \ReflectionNamedType && str_starts_with($returnType->getName(), 'Illuminate\Database\Eloquent\Relations\\')) {
+            return true;
+        }
 
         if ($method->isStatic() || $method->isAbstract()) {
             return false;

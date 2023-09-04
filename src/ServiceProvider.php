@@ -13,7 +13,7 @@ class ServiceProvider extends \Illuminate\Support\ServiceProvider
     public function boot()
     {
         $this->mergeConfigFrom(
-            __DIR__ . '/../configs/typescript.php', 'typescript'
+            __DIR__ . '/../configs/typescript.php', 'model-typescript'
         );
 
         if (!$this->app->runningInConsole()) {
@@ -21,8 +21,8 @@ class ServiceProvider extends \Illuminate\Support\ServiceProvider
         }
 
         $this->publishes([
-            __DIR__ . '/../configs/typescript.php' => config_path('typescript.php'),
-        ], 'model-typescript-config');
+            __DIR__ . '/../configs/typescript.php' => config_path('model-typescript.php'),
+        ], 'model-typescript');
 
         $this->commands([
             GenerateCommand::class,

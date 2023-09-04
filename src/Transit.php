@@ -4,7 +4,7 @@ namespace NieFufeng\LaravelModelTypescript;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection;
-use NieFufeng\LaravelModelTypescript\Utils\ClassHelper;
+use NieFufeng\LaravelModelTypescript\Utils\Helper;
 use ReflectionClass;
 
 class Transit

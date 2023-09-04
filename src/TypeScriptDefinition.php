@@ -28,7 +28,7 @@ class TypeScriptDefinition
             return collect(array_map($this->typeToString(...), $type))->join(' | ');
         }
 
-        return $type->value;
+        return $type->toString();
     }
 
     protected function typeContainsNull(): bool
@@ -52,6 +52,7 @@ class TypeScriptDefinition
                 fn(Collection $types) => $types->push(TypeScriptTypes::Null)
             )
             ->map($this->typeToString(...))
+            ->unique()
             ->join(' | ', '');
     }
 

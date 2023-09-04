@@ -2,9 +2,10 @@
 
 namespace NieFufeng\LaravelModelTypescript;
 
+use Illuminate\Container\Container;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Pipeline\Pipeline;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\Pipeline;
 use Illuminate\Support\Str;
 use NieFufeng\LaravelModelTypescript\Exceptions\GenerateException;
 use NieFufeng\LaravelModelTypescript\Generators\AccessorsGenerator;
@@ -36,17 +37,17 @@ class Manager
         $queue->push(...$this->getModels()->values());
 
         while ($current = $queue->pop()) {
-            /** @var ReflectionClass|null $current */
             if ($this->modelIsGenerated($current)) {
                 continue;
             }
 
-            $this->generatedModels[$current->name] = Pipeline::send(new Transit($current, $queue))
+            $this->generatedModels[$current->name] = (new Pipeline(Container::getInstance()))
+                ->send(new Transit($current, $queue))
                 ->via('generate')
                 ->through([
                     DatabaseColumnsGenerator::class,
                     AccessorsGenerator::class,
-                    RelationsGenerator::class
+                    RelationsGenerator::class,
                 ])
                 ->thenReturn();
         }
@@ -66,6 +67,11 @@ class Manager
         file_put_contents($this->outputPath, $output);
     }
 
+    /**
+     * 判断模型是否已经生成过了
+     * @param ReflectionClass $model
+     * @return bool
+     */
     protected function modelIsGenerated(ReflectionClass $model): bool
     {
         return $this->generatedModels->has($model->name);

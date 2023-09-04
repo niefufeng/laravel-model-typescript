@@ -11,7 +11,7 @@ use Illuminate\Support\Str;
 use NieFufeng\LaravelModelTypescript\Enums\TypeScriptTypes;
 use NieFufeng\LaravelModelTypescript\Transit;
 use NieFufeng\LaravelModelTypescript\TypeScriptDefinition;
-use NieFufeng\LaravelModelTypescript\Utils\ClassHelper;
+use NieFufeng\LaravelModelTypescript\Utils\Helper;
 use ReflectionMethod;
 
 class AccessorsGenerator implements GeneratorContract
@@ -29,8 +29,8 @@ class AccessorsGenerator implements GeneratorContract
                 if (str_starts_with($method->name, 'get') && str_ends_with($method->name, 'Attribute')) {
                     $fieldName = Str::snake(Str::of($method->name)->between('get', 'Attribute')->toString());
 
-                    if (ClassHelper::hasReturnType($method)) {
-                        $types = $this->convertPhpReturnTypeToTypeScriptType(ClassHelper::getReturnType($method));
+                    if (Helper::hasReturnType($method)) {
+                        $types = Helper::convertReturnTypeToTypeScript(Helper::getReturnType($method));
                     } else {
                         $types = TypeScriptTypes::Any;
                     }
@@ -53,9 +53,9 @@ class AccessorsGenerator implements GeneratorContract
 
                 $getReflection = new \ReflectionFunction($attribute->get);
 
-                if (ClassHelper::hasReturnType($getReflection)) {
-                    $types = $this->convertPhpReturnTypeToTypeScriptType(
-                        ClassHelper::getReturnType($getReflection)
+                if (Helper::hasReturnType($getReflection)) {
+                    $types = Helper::convertReturnTypeToTypeScript(
+                        Helper::getReturnType($getReflection)
                     );
                 } else {
                     $types = TypeScriptTypes::Any;
@@ -90,7 +90,7 @@ class AccessorsGenerator implements GeneratorContract
                     return false;
                 }
 
-                $returnType = ClassHelper::getReturnType($method);
+                $returnType = Helper::getReturnType($method);
 
                 if ($returnType === null) {
                     return true;
@@ -112,72 +112,5 @@ class AccessorsGenerator implements GeneratorContract
 
                 return $attribute->get === null;
             });
-    }
-
-    protected function convertPhpReturnTypeToTypeScriptType(\ReflectionType|string|null $type): array|string|TypeScriptTypes
-    {
-        if ($type === null) {
-            return TypeScriptTypes::Null;
-        }
-
-        if (is_string($type)) {
-            return $this->convertPhpBaseTypeToTypeScriptType($type);
-        }
-
-        $returnTypes = [];
-
-        foreach ($type instanceof \ReflectionNamedType ? [$type] : $type->types as $type) {
-            /** @var \ReflectionType $type */
-            if ($type->allowsNull()) {
-                $returnTypes[] = TypeScriptTypes::Null;
-            }
-
-            if ($type instanceof \ReflectionNamedType) {
-                $returnTypes[] = $this->convertPhpBaseTypeToTypeScriptType($type->getName());
-
-                continue;
-            }
-
-            $returnTypes[] = $this->convertPhpReturnTypeToTypeScriptType($type);
-        }
-
-        $returnTypes = collect($returnTypes)
-            ->flatten(1)
-            ->map(function (array|string|TypeScriptTypes $type) {
-                if (is_array($type) && count($type) === 1) {
-                    $type = $type[0];
-                }
-
-                if ($type instanceof TypeScriptTypes) {
-                    return $type->value;
-                }
-
-                return $type;
-            })
-            ->unique();
-
-        return $returnTypes->count() === 1 ? $returnTypes->first() : $returnTypes->toArray();
-    }
-
-    protected function convertPhpBaseTypeToTypeScriptType(string $type): array|string|TypeScriptTypes
-    {
-        if (str_contains($type, '\\')) {
-            if (ClassHelper::classInstanceOf($type, Model::class)) {
-                return ClassHelper::namespaceClassToDotClass($type);
-            }
-            if (ClassHelper::classIsEnum($type)) {
-                return collect((new \ReflectionClass($type))->getConstants())->map(fn($constant) => '"' . $constant->value . '"')->toArray();
-            }
-
-            return TypeScriptTypes::Any;
-        }
-
-        return match ($type) {
-            'string' => TypeScriptTypes::String,
-            'int', 'float' => TypeScriptTypes::Number,
-            'array' => [TypeScriptTypes::Array, TypeScriptTypes::Object],
-            'bool' => TypeScriptTypes::Boolean,
-            default => TypeScriptTypes::Any
-        };
     }
 }
