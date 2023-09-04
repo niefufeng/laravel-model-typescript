@@ -10,7 +10,7 @@
 # install
 composer require niefufeng/laravel-model-typescript --dev
 # publish config files
-php artisan vendor:publish --tag=model-typescript-config
+php artisan vendor:publish --tag=model-typescript
 # generate
-php artisan typescript:generate
+php artisan model-typescript:generate
 ```
